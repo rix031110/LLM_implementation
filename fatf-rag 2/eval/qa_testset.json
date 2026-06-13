@@ -1,0 +1,14 @@
+{
+  "description": "Answer-level QA test set from the group's experiments. Each item has a question and a short expected (ground-truth) substring. An answer 'matches' if the expected string appears (case-insensitive) inside the generated answer. Used by eval/scenarios.py to compare chunking strategies x generation models.",
+  "metric": "factual_substring_match",
+  "qa": [
+    {"question": "What is the Financial Action Task Force?", "expected": "an inter-governmental body"},
+    {"question": "What is FATF?", "expected": "the Financial Action Task Force"},
+    {"question": "What does AML/CFT mean?", "expected": "anti-money laundering and countering the financing of terrorism"},
+    {"question": "When were the recommendations first drafted?", "expected": "1996"},
+    {"question": "On which year were the recommendations last updated?", "expected": "2003"},
+    {"question": "Why are Non-profit organisations included on the recommendations?", "expected": "they are particularly vulnerable to misuse"},
+    {"question": "Why are the FATF recommendations being revised?", "expected": "to address new and emerging threats"},
+    {"question": "Why should countries implement a risk-based approach?", "expected": "to target their resources more effectively"}
+  ]
+}
