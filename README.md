@@ -74,16 +74,58 @@ There are 3 available strategies for chunking that can be compared empirically: 
 
 **Generation (`fatf-rag 2/src/llm.py`).** Decoupled from retrieval and **fully local — no API keys**, with two interchangeable backends:
 
-- **`hf` (default).** Open-source **GPT-2** or **Flan-T5** through Hugging Face  `transformers` (`src/hf_generator.py`). Runs with just `pip install` — nothing else to set up — so the project works end-to-end out of the box. This is also the backend behind our scenario experiments (see §4).
+- **`hf` (default).** Open-source **GPT-2** or **Flan-T5** through Hugging Face  `transformers` (`src/hf_generator.py`). Runs with just `pip install` — nothing else to set up — so the project works end-to-end out of the box. This is also the backend behind our scenario experiments.
 - **`ollama`.** A local **Llama** model served by [Ollama](https://ollama.com) at `localhost:11434`, called over its HTTP API using only the Python standard library. Higher answer quality; needs the Ollama app installed.
 
 Both answer *only* from the supplied passages. **If the selected backend isn't available, the system degrades gracefully to retrieval-only mode** with an actionable message instead of failing. Switch backends with `LLM_BACKEND` / `HF_MODEL` in `.env`.
 
-### Experiment design: chunking × generation model.
+## 3. Alternatives we considered and rejected
 
-Retrieval metrics tell us whether the right text was *found*; they don't tell us whether the generated *answer* is right. We ran an end-to-end experiment (`eval/scenarios.py`, also in `notebooks/rag_scenarios.ipynb`) crossing **three chunking strategies** with **three open-source generators**, scored by whether a short expected answer appears in the output across 8 QA pairs:
+- **'Qwen3-Embedding-0.6B' embedding model.** [Qwen](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) was considered as an alternative to [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), as this last model automatically truncates text longer than 256 words and is mainly trained on english. Nevertheless, Qwen is a considerably heavier model increasing the hardware demand and processing times. Inforcing a larger chunk on all-MiniLM is possible but was discarded as it increased the risk of quality loss, in consequence we opted for chunks of 250 word size.
+- **Purely dense or purely lexical (BM25) retrieval.** Each fails where the other succeeds: dense captures meaning and paraphrase but blurs exact terms (acronyms, years, code-like references such as "AML/CFT" or "Recommendation 8"), while BM25 nails exact terms but is blind to synonyms and rephrasing. Their errors are uncorrelated, so a hybrid (fusing both scores) recovers the documents either method alone would miss.
 
-*Run it*: `python -m eval.scenarios` (downloads models on first use).
+## 4. Evaluation
+
+### Retrieval evaluation
+
+*Run it:*
+
+```bash
+python -m eval.evaluate              # current config on the saved index
+python -m eval.evaluate --ablation   # retriever + chunk-size comparison
+```
+
+Retrieval is evaluated independently of the LLM (the part we control and can measure objectively). We hand-built a **15-question test set** (`eval/testset.json`) and located the **gold page(s)** for each answer manually in the PDF. A retrieved chunk counts as *relevant* if its page span intersects the gold pages. We report:
+
+- **Recall@k** — share of questions with ≥1 relevant chunk in the top-k (here, since each question has a small target set, this equals hit rate / Success@k).
+- **MRR** — mean reciprocal rank of the first relevant chunk (does the answer come first?).
+- **Precision@k** — average fraction of the top-k that are relevant.
+
+#### Results (verified)
+
+BM25 on the 15-question set (`fatf-rag 2/eval/results/bm25_default.json`):
+
+| Retriever | Recall@5 | MRR | Precision@5 |
+|-----------|:-------:|:---:|:-----------:|
+| **bm25**  | **1.00** | **0.88** | 0.51 |
+
+Every question retrieves a gold page within the top-5, and on 11/15 the very first result is correct (MRR 0.88). The dense and hybrid rows are produced by the same harness when you run it on a machine with Hugging Face access (the model download is blocked in some sandboxes); the notebook prints all three side by side.
+
+### How we interpret this
+
+- **BM25 is a deliberately strong baseline here, and that is the headline finding, not an anti-climax.** The corpus is small, highly structured, and uses consistent terminology, so questions phrased with the document's own vocabulary are nailed by exact match. A team that reported only a dense-retriever number would be *overstating* the need for embeddings on this corpus.
+- **Where dense/hybrid earn their keep is paraphrase** — questions that don't share surface terms with the text (e.g. asking about "money sent abroad" rather than "wire transfer"). Our current test set is mostly in-vocabulary, so it under-tests that gap; see Limitations.
+- **Precision@5 ≈ 0.5 is expected and fine.** Several gold answers live on a single page, so at most a couple of the five returned chunks can be "relevant" by our page-intersection rule. Recall and MRR are the metrics that matter for a QA front-end that shows 5 sources.
+
+### Chunking strategy and generation model.
+
+*Run it*: 
+
+```bash
+python -m eval.scenarios #(downloads models on first use).
+```
+
+Retrieval metrics tell us whether the right text was *found*; they don't tell us whether the generated *answer* is right. We ran an end-to-end experiment (`fatf-rag 2/eval/scenarios.py`, also in `fatf-rag 2/notebooks/rag_scenarios.ipynb`) crossing **three chunking strategies** with **three open-source generators**, scored by whether a short expected answer appears in the output across 8 QA pairs:
 
 | Scenario | Chunking | Model | Correct | Accuracy (%) | 
 |----------|----------|-------|---------|--------------|
@@ -97,81 +139,15 @@ Retrieval metrics tell us whether the right text was *found*; they don't tell us
 | 8 | paragraph (no overlap) | llama | 7 | 87.5 |
 | 9 | paragraph (overlap=50) | llama | 7 | 87.5 |
 
-**What we found and how we read it.** Two effects dominated. First, *chunking strategy doesn't have a vissible meaningfull effect*: the `page` strategy performed reasonably well when compared to small chunking, even giving better result for the case of GPT-2
+*Note:* The accuracy levels displayed here can be found on `fatf-rag 2/eval/results/validated_scenarios.xlsx`, as the csv produced by the code needed expert-validation.
+
+#### What we found and how we read it.
+
+Two effects dominated. First, *chunking strategy doesn't have a vissible meaningfull effect*: the `page` strategy performed reasonably well when compared to small chunking, even giving better result for the case of GPT-2
 
 Second, *the seq2seq model (Flan-T5) beat the causal GPT-2, but both models are beaten by llama*: Flan-T5 is instruction-tuned and extractive-friendly, so it copies the answer out of the context, whereas GPT-2 tends to continue the prompt fluently without actually answering. Llama consistantly provide correct answers and guide its source so it can be tracked back.
 
-## 3. Alternatives we considered and rejected
-
-- **'Qwen3-Embedding-0.6B' embedding model.** [Qwen](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) was considered as an alternative to [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), as this last model automatically truncates text longer than 256 words and is mainly trained on english. Nevertheless, Qwen is a considerably heavier model increasing the hardware demand and processing times. Inforcing a larger chunk on all-MiniLM is possible but was discarded as it increased the risk of quality loss, in consequence we opted for chunks of 250 word size.
-- **Purely dense or purely lexical (BM25) retrieval.** Each fails where the other succeeds: dense captures meaning and paraphrase but blurs exact terms (acronyms, years, code-like references such as "AML/CFT" or "Recommendation 8"), while BM25 nails exact terms but is blind to synonyms and rephrasing. Their errors are uncorrelated, so a hybrid (fusing both scores) recovers the documents either method alone would miss.
-<!-- 
-- **A cross-encoder reranker.** A reasonable next step (see §6), but it adds a second
-  model and latency. We left it out of the core and flagged it as future work because the
-  base retrieval already saturates our test set.
-  -->
-
-## 4. Evaluation
-
-Retrieval is evaluated independently of the LLM (the part we control and can measure objectively). We hand-built a **15-question test set** (`eval/testset.json`) and located the **gold page(s)** for each answer manually in the PDF. A retrieved chunk counts as *relevant* if its page span intersects the gold pages. We report:
-
-- **Recall@k** — share of questions with ≥1 relevant chunk in the top-k (here, since each question has a small target set, this equals hit rate / Success@k).
-- **MRR** — mean reciprocal rank of the first relevant chunk (does the answer come first?).
-- **Precision@k** — average fraction of the top-k that are relevant.
-
-Run it:
-
-```bash
-python -m eval.evaluate              # current config on the saved index
-python -m eval.evaluate --ablation   # retriever + chunk-size comparison
-```
-
-### Results (verified)
-
-BM25 on the 15-question set (`eval/results/bm25_default.json`):
-
-| Retriever | Recall@5 | MRR | Precision@5 |
-|-----------|:-------:|:---:|:-----------:|
-| **bm25**  | **1.00** | **0.88** | 0.51 |
-
-Every question retrieves a gold page within the top-5, and on 11/15 the very first result
-is correct (MRR 0.88). The dense and hybrid rows are produced by the same harness when you
-run it on a machine with Hugging Face access (the model download is blocked in some
-sandboxes); the notebook prints all three side by side.
-
-### How we interpret this
-
-- **BM25 is a deliberately strong baseline here, and that is the headline finding, not an
-  anti-climax.** The corpus is small, highly structured, and uses consistent terminology,
-  so questions phrased with the document's own vocabulary are nailed by exact match. A
-  team that reported only a dense-retriever number would be *overstating* the need for
-  embeddings on this corpus.
-- **Where dense/hybrid earn their keep is paraphrase** — questions that don't share
-  surface terms with the text (e.g. asking about "money sent abroad" rather than "wire
-  transfer"). Our current test set is mostly in-vocabulary, so it under-tests that gap;
-  see Limitations.
-- **Precision@5 ≈ 0.5 is expected and fine.** Several gold answers live on a single page,
-  so at most a couple of the five returned chunks can be "relevant" by our page-intersection
-  rule. Recall and MRR are the metrics that matter for a QA front-end that shows 5 sources.
-
-## 5. Limitations & honesty
-
-- **The test set is a sanity check, not a benchmark.** 15 questions with page-level,
-  hand-assigned gold labels, written by the same group that built the system — small, and
-  not independent. It catches regressions and supports the design comparison; it does not
-  prove production quality.
-- **Page-level relevance is coarse.** A chunk can overlap a gold page without containing
-  the precise answer sentence. We accepted this trade-off for labelling speed and
-  transparency.
-- **The test set is in-vocabulary**, which flatters BM25. A fairer next version would add
-  deliberately paraphrased and multi-hop questions.
-- **Answer scoring is a strict substring match.** The scenario experiment scores answers
-  by whether an expected string appears verbatim, which under-counts paraphrased-but-correct
-  answers (we hand-verified a few of these in the notebook). It is a useful comparative
-  signal across scenarios, not an absolute accuracy. Faithfulness/citation scoring of
-  generated answers is future work.
-
-## 6. Future work
+## 5. Future work
 
 - Test the model on different languages (ex. Italian and spanish).
 - Modify pipeline to integrate more than 1 document as source.
@@ -208,28 +184,28 @@ fatf-rag/
 └── README.md
 ```
 
-## AI usage
+## Working strategy
+
+### Natural intelligence
+
+This project started from the course repository [nluninja/text-mining-dataviz-aa2526](https://github.com/nluninja/text-mining-dataviz-aa2526),specifically the notebook **`NLP14_1_RAG_Pipeline`**. That notebook gave us a working baseline RAG flow (document store → embeddings → FAISS → a generation model). 
+
+We first adapted the workflow to analyse Scouts manuals and getting confortable with the different functions and parameters, we later adapt the workflow to the FAFT analysis.
+
+Having the understanding of the code, and the uncertanty posted by each stage we rebuilt and extended it into a configurable, reproducible experiment condensensed*. To keep the experiment clean and avoid repeating large cells, the pipeline is written as **reusable functions** parameterized by chunking strategy and generation model.
+
+We used an incremental commit history and branches throughout the project rather than a single upload at the end.
+
+### AI usage
 
 Per the course AI policy, here is where AI tools contributed to this project.
 
 - **Tool used:** Claude (Anthropic).
-- **Where it helped:** boilerplate for the retrieval pipeline modules (FAISS/BM25
-  wrappers, the Streamlit and CLI scaffolding), drafting docstrings and this README, and
-  setting up the evaluation harness structure.
-- **What remained the group's own work:** the problem framing (grounded, citable QA for a
-  compliance corpus); the design decisions (hybrid retrieval, page-tagged chunking, the
-  choice of open-source local generators, graceful degradation); **the scenario experiment
-  itself** — the chunking strategies, the GPT-2 vs Flan-T5 comparison, the 8 QA pairs and
-  the factual-match methodology, originally built by the group in `rag_scenarios.ipynb`;
-  the retrieval evaluation methodology (metric definitions, hand-built test set, gold-page
-  labels); and the interpretation of all results — including the finding that chunking and
-  an instruction-following reader matter more than model size, that BM25 is a strong
-  retrieval baseline here, and the honest account of the test sets' limitations.
+- **Where it helped:** boilerplate for the retrieval pipeline modules (FAISS/BM25 wrappers, the Streamlit and CLI scaffolding), debugging the generation step (the GPT-2 1024-token `IndexError`), researching and comparing embedding-model context windows and  multilingual support, refactoring the notebook into reusable functions and pipeline structure 
+- **What remained the group's own work:** the problem framing (grounded, citable QA for a compliance corpus); the design decisions (hybrid retrieval, page-tagged chunking, the choice of open-source local generators, graceful degradation); **the scenario experiment itself** — the chunking strategies, the text-generation model comparison, the 8 QA pairs and the factual-match methodology, originally built by the group in `rag_scenarios.ipynb`; the retrieval evaluation methodology (metric definitions, hand-built test set, gold-page labels); and the interpretation of all results.
 
 The code and text above are our responsibility; any errors are ours.
 
 ## License / source
 
-The FATF Recommendations are © 2012 FATF/OECD. The PDF is included here for academic,
-non-commercial coursework only and is redistributed under the terms of the original
-publication. This repository's own code is released for educational use.
+The FATF Recommendations are © 2012 FATF/OECD. The PDF is included here for academic, non-commercial coursework only and is redistributed under the terms of the original publication. This repository's own code is released for educational use.
