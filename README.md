@@ -37,7 +37,7 @@ python -m eval.evaluate --ablation   # retrieval metrics + ablation
 python -m eval.scenarios             # answer-level chunking x model comparison
 ```
 
-**Answer generation** is fully local with **no API keys**. By default it uses the `hf` backend (open-source Flan-T5 via `transformers`, downloaded on first run) — nothing extra to install. For higher quality, set `LLM_BACKEND=ollama` in `.env`, install [Ollama](https://ollama.com/download), and ollama pull llama3.2`. If the chosen backend isn't available, every entry-point still works and returns cited passages (retrieval-only mode).
+**Answer generation** is fully local with **no API keys**. By default it uses the `hf` backend (open-source Flan-T5 via `transformers`, downloaded on first run). For higher quality, set `LLM_BACKEND=ollama` in `.env`, install [Ollama](https://ollama.com/download), and ollama pull llama3.2`. If the chosen backend isn't available, every entry-point still works and returns cited passages (retrieval-only mode).
 
 ## 1. Problem framing
 
