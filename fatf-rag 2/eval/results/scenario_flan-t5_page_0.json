@@ -1,0 +1,58 @@
+[
+  {
+    "question":"What is the Financial Action Task Force?",
+    "expected":"an inter-governmental body",
+    "generated":"an independent inter-governmental body that develops and promotes policies to protect the global financial system against money laundering, terrorist financing and the financing of proliferation of weapons of mass destruction",
+    "match":false,
+    "gen_time_s":3.93
+  },
+  {
+    "question":"What is FATF?",
+    "expected":"the Financial Action Task Force",
+    "generated":"The Financial Action Task Force",
+    "match":true,
+    "gen_time_s":0.23
+  },
+  {
+    "question":"What does AML\/CFT mean?",
+    "expected":"anti-money laundering and countering the financing of terrorism",
+    "generated":"Financial supervisors should be able to exchange the following types of information when relevant for AML\/CFT purposes",
+    "match":false,
+    "gen_time_s":0.58
+  },
+  {
+    "question":"When were the recommendations first drafted?",
+    "expected":"1996",
+    "generated":"2012",
+    "match":false,
+    "gen_time_s":0.2
+  },
+  {
+    "question":"On which year were the recommendations last updated?",
+    "expected":"2003",
+    "generated":"",
+    "match":false,
+    "gen_time_s":0.17
+  },
+  {
+    "question":"Why are Non-profit organisations included on the recommendations?",
+    "expected":"they are particularly vulnerable to misuse",
+    "generated":"d) Effective capacity to respond to international requests for information about an NPO of concern Consistent with Recommendations on international cooperation, countries should identify appropriate points of contact and procedures to respond to international requests for information regarding particular NPOs suspected of terrorist financing or other forms of terrorist support",
+    "match":false,
+    "gen_time_s":1.41
+  },
+  {
+    "question":"Why are the FATF recommendations being revised?",
+    "expected":"to address new and emerging threats",
+    "generated":"new information regarding emerging threats and vulnerabilities to the global financial system",
+    "match":false,
+    "gen_time_s":0.37
+  },
+  {
+    "question":"Why should countries implement a risk-based approach?",
+    "expected":"to target their resources more effectively",
+    "generated":"to combat money laundering and terrorist financing",
+    "match":false,
+    "gen_time_s":0.32
+  }
+]

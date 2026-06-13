@@ -1,0 +1,44 @@
+[
+  {
+    "scenario":1,
+    "chunking":"page",
+    "model":"gpt2",
+    "matches":0,
+    "accuracy_%":0.0
+  },
+  {
+    "scenario":2,
+    "chunking":"paragraph no-overlap",
+    "model":"gpt2",
+    "matches":0,
+    "accuracy_%":0.0
+  },
+  {
+    "scenario":3,
+    "chunking":"paragraph overlap=50",
+    "model":"gpt2",
+    "matches":0,
+    "accuracy_%":0.0
+  },
+  {
+    "scenario":4,
+    "chunking":"page",
+    "model":"flan-t5",
+    "matches":1,
+    "accuracy_%":12.5
+  },
+  {
+    "scenario":5,
+    "chunking":"paragraph no-overlap",
+    "model":"flan-t5",
+    "matches":1,
+    "accuracy_%":12.5
+  },
+  {
+    "scenario":6,
+    "chunking":"paragraph overlap=50",
+    "model":"flan-t5",
+    "matches":1,
+    "accuracy_%":12.5
+  }
+]

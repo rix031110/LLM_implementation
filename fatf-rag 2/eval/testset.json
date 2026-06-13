@@ -1,0 +1,21 @@
+{
+  "description": "Hand-built retrieval test set for the FATF Recommendations (Feb 2012). A retrieved chunk counts as relevant if its page span intersects `gold_pages`. `keywords` is an auxiliary lexical check used for qualitative inspection, not for the headline metrics. Gold pages were assigned by manually locating the operative/definitional text for each question in the source PDF.",
+  "relevance": "page_intersection",
+  "questions": [
+    {"id": 1,  "question": "What is the definition of a beneficial owner?", "gold_pages": [111, 112, 16], "keywords": ["beneficial owner", "natural person", "ultimately owns"]},
+    {"id": 2,  "question": "What is the risk-based approach in the FATF Recommendations?", "gold_pages": [10, 33, 34], "keywords": ["risk-based approach", "assess", "mitigate"]},
+    {"id": 3,  "question": "When should enhanced due diligence be applied?", "gold_pages": [18, 21, 65], "keywords": ["enhanced", "higher risk", "due diligence"]},
+    {"id": 4,  "question": "What are the requirements for wire transfers under Recommendation 16?", "gold_pages": [16, 72, 73, 74], "keywords": ["wire transfer", "originator", "beneficiary"]},
+    {"id": 5,  "question": "Who are politically exposed persons (PEPs) and what measures apply to them?", "gold_pages": [18, 69], "keywords": ["politically exposed", "prominent", "senior management"]},
+    {"id": 6,  "question": "What are the rules for cross-border correspondent banking relationships?", "gold_pages": [18, 70], "keywords": ["correspondent", "respondent", "shell bank"]},
+    {"id": 7,  "question": "What does Recommendation 21 require regarding tipping-off and confidentiality?", "gold_pages": [21, 61, 84], "keywords": ["tipping-off", "report", "confidential"]},
+    {"id": 8,  "question": "What must financial institutions do regarding new technologies?", "gold_pages": [19], "keywords": ["new technologies", "risks", "new products"]},
+    {"id": 9,  "question": "What are the record-keeping requirements for financial institutions?", "gold_pages": [16, 17], "keywords": ["records", "five years", "transactions"]},
+    {"id": 10, "question": "When must a suspicious transaction report be filed?", "gold_pages": [17, 21], "keywords": ["suspicious", "report", "proceeds of crime"]},
+    {"id": 11, "question": "What measures apply to cash couriers and cross-border transportation of currency?", "gold_pages": [27, 100], "keywords": ["cash courier", "cross-border", "currency"]},
+    {"id": 12, "question": "Which businesses count as designated non-financial businesses and professions (DNFBPs)?", "gold_pages": [22, 25], "keywords": ["casinos", "real estate", "lawyers"]},
+    {"id": 13, "question": "What are the designated categories of offences for money laundering?", "gold_pages": [36, 113], "keywords": ["designated categories", "offences", "predicate"]},
+    {"id": 14, "question": "What is the customer due diligence threshold for occasional transactions?", "gold_pages": [16, 66], "keywords": ["occasional", "15", "threshold"]},
+    {"id": 15, "question": "What is required when relying on third parties to perform CDD?", "gold_pages": [20, 67], "keywords": ["third parties", "reliance", "ultimately responsible"]}
+  ]
+}
