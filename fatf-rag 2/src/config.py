@@ -23,9 +23,9 @@ PDF_PATH = DATA_DIR / "ENG_REC.pdf"
 class Config:
     # --- Ingestion / chunking ---
     pdf_path: Path = PDF_PATH
-    chunk_size: int = 900           # characters per chunk (~180-220 tokens)
-    chunk_overlap: int = 150        # overlap keeps cross-boundary context
-    min_chunk_chars: int = 80       # drop boilerplate fragments smaller than this
+    chunk_size: int = 250           # characters per chunk (~180-220 tokens)
+    chunk_overlap: int = 40        # overlap keeps cross-boundary context
+    min_chunk_chars: int = 20       # drop boilerplate fragments smaller than this
 
     # --- Embeddings ---
     embed_model: str = field(

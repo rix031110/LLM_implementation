@@ -171,9 +171,9 @@ def _build_paragraph_chunks(
 
 def build_chunks(
     pdf_path: str | Path,
-    chunk_size: int = 900,
-    chunk_overlap: int = 150,
-    min_chunk_chars: int = 80,
+    chunk_size: int = 250,
+    chunk_overlap: int = 40,
+    min_chunk_chars: int = 20,
     strategy: str = "recursive",
 ) -> List[Chunk]:
     """Full ingestion with a selectable chunking strategy.

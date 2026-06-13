@@ -3,103 +3,119 @@
 > Final project — *Text Mining & Data Visualization (AA 2025/26)*
 > Group members: Maria Briones, Riccardo Dondi, Sayantan Mandal.
 
-This is the **Text Mining & Data Visualization** course project for the *RAG on a domain-specific corpus with retrieval evaluation* track. The sections below explain *what* and*why* we built this: the problem framing, the design choices we made, the alternatives we rejected, and how we
-read our evaluation results.
+This is the **Text Mining & Data Visualization** course project for the *RAG on a domain-specific corpus with retrieval evaluation* track. The sections below explain the problem framing, the design choices we made, the alternatives we rejected, and how we interpret our evaluation results.
 
-The provided tool is a domain-specific RAG system that answers questions about the **40 FATF Recommendations (2012)** (*International Standards on Combating Money Laundering and the Financing of Terrorism & Proliferation*, a document with 126 pages, that sets the global AML/CFT standard). 
+The provided tool is a domain-specific RAG system that answers questions about the **40 FATF Recommendations (2012)** (*International Standards on Combating Money Laundering and the Financing of Terrorism & Proliferation*), a 126-page document that sets the global AML/CFT standard. 
 
+We chose the FATF Recommendations for their global influence: the text is readily available in multiple languages, which lets us test our model under different linguistic contexts (future work). While we could apply the same principle to a more widely known text such as the Bible, the specificity of the FATF Recommendations makes it less likely that text-generation models were trained on this domain, giving us an exceptional opportunity to detect signs of hallucination.
+
+---
+
+## Quickstart
+
+```bash
+# 1. Install Python deps
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Build the index (downloads the embedding model on first run)
+python -m scripts.build_index
+
+# 3a. Ask from the command line (generation uses local Flan-T5 by default)
+python cli.py "When must enhanced due diligence be applied?"
+python cli.py --retriever bm25 --no-generate "Recommendation 16 wire transfer"
+
+# 3b. Or launch the web app
+python -m streamlit run app/streamlit_app.py
+
+# 3c. Or open the notebooks
+jupyter notebook notebooks/rag_walkthrough.ipynb   # production pipeline
+jupyter notebook notebooks/rag_scenarios.ipynb     # chunking x model experiments
+
+# 4. Evaluate
+python -m eval.evaluate --ablation   # retrieval metrics + ablation
+python -m eval.scenarios             # answer-level chunking x model comparison
+```
+
+**Answer generation** is fully local with **no API keys**. By default it uses the `hf` backend (open-source Flan-T5 via `transformers`, downloaded on first run) — nothing extra to install. For higher quality, set `LLM_BACKEND=ollama` in `.env`, install [Ollama](https://ollama.com/download), and ollama pull llama3.2`. If the chosen backend isn't available, every entry-point still works and returns cited passages (retrieval-only mode).
 
 ## 1. Problem framing
 
-Compliance and related legal frameworks are constantly evolving, in consequence, teams must continously make efforts to stay updated.  repeatedly ask narrow questions of a long, dense regulatory text: *"When is enhanced due diligence required?"*, *"What must accompany a wire transfer?"*, *"Who counts as a beneficial owner?"*. Reading 126 pages for each question
-is slow, and a plain LLM answers from memory — it cannot cite the source, and it
-hallucinates plausible-but-wrong specifics, which is unacceptable in a regulatory
-setting.
+Compliance and related legal frameworks are constantly evolving, in consequence, teams must continously make efforts to stay updated. Since 2012 FAFT has revisited 3 times its 40 reccomendations, this changes in turn encourage modifications on local legal frameworks inside countries. Deveolping domain-specific tools that help working teams to keep up with this evolving framework could mean accelerate workflows and avoid frustration due to over-exposure to training workshops.  
 
-We framed the task as **grounded, auditable question answering**: retrieve the passages
-that actually contain the answer, and force the model to answer *only* from them, citing
-the Recommendation and page. Two requirements followed directly from the domain:
+Teams must constantly adress questions like *"Why is enhanced due diligence required?"*, *"What is reccomendation number 6?"*, *"Why implement a risk-based approach?"*. Reading a 126 pages document each time its updated can be slow and most times innecesary. Plain LLM models are not always updated with the sources this specific domain needs. Furthermore, most of the time their answers will not cite the source unless they're explicitly asked for it. LLM's are also prompt to hallucinates plausible-but-wrong specifics, which not acceptable in a regulatory setting.
 
-1. **Verifiability over fluency.** A confident wrong answer is worse than "I can't find
-   this in the sources." Citations and page-level traceability are first-class features,
-   not decoration.
-2. **Robustness to query style.** Users mix conceptual questions (*"what is the
-   risk-based approach?"*) with exact-term lookups (*"Recommendation 16"*, *"USD/EUR
-   15 000"*). The retriever has to handle both.
+We framed the task as a **grounded, auditable question-answering**, that is, retrieve the passages that actually contain the answer, and force the model to answer *only* from them, citing the Recommendation and page. Two requirements followed directly from the domain:
+
+1. **Verifiability over fluency.** A confident wrong answer is worse than "I can't find this in the sources." Citations and page-level traceability are first-class features, not decoration.
+2. **Robustness to query style.** Users mix conceptual questions (*"what is the risk-based approach?"*) with exact-term lookups (*"Recommendation 16"*, *"USD/EUR 15 000"*). The retriever has to handle both.
 
 ## 2. System design
 
+As most compliance teams work on secure environments with wide internet restrictions we opted for a system that runs locally without the external needs of tools like Colab. In consequence, the use of our RAG system is limited by the software and hardware specifications. The use of GPU is required in order for embedding and text generation models to work on acceptable time-frames.
+
+Our **pipeline (`fatf-rag 2/cli.py`)** works as follow:
+
 ```
-PDF ──► ingest/chunk ──► embed ──► FAISS index ┐
+Starting document ──► ingest/chunk ──► embed ──► FAISS index ┐
                           │                     ├─► retriever (dense | bm25 | hybrid) ──► LLM (grounded) ──► cited answer
         BM25 lexical index ─────────────────────┘
 ```
+**Starting document**: a PDF, on this case *40 FATF Recommendations (2012)*.
 
-**Ingestion & chunking (`src/ingest.py`).** We extract page text with `pdfplumber`,
-strip the recurring header/footer and bare page numbers, then split into overlapping
-character chunks (default 900 chars / 150 overlap) that prefer to break on paragraph or
-sentence boundaries. Crucially, **every chunk carries its page span and a best-effort
-section label** (e.g. *Recommendation 10*, *Interpretive Note to Recommendation 16*,
-*Glossary*) detected from headings. That metadata is what makes answers citable.
+**Ingestion & chunking (`fatf-rag 2/src/ingest.py`).** We extract page text with `pdfplumber`, strip the recurring header/footer and bare page numbers, then split into chunks (default 250 words / 20 overlap) that prefer to break on paragraph or sentence boundaries. Crucially, **every chunk carries its page span and a best-effort section label** (e.g. *Recommendation 10*, *Interpretive Note to Recommendation 16*, *Glossary*) detected from headings. That metadata is what makes answers citable. 
+There are 3 available strategies for chunking that can be compared empirically: `recursive` (character windows with overlap — the production default), `page` (one page per chunk), and `paragraph` (word-based sliding window with optional overlap). The latter two come from our scenario experiments.
 
-**Embeddings (`src/embeddings.py`).** Local `sentence-transformers/all-MiniLM-L6-v2`,
-384-dim, L2-normalised. No API key, deterministic, free for the evaluator to reproduce.
+**Embeddings (`fatf-rag 2/src/embeddings.py`).** Local `sentence-transformers/all-MiniLM-L6-v2`, 384-dim, L2-normalised. No API key, deterministic, free for the evaluator to reproduce. 
 
-**Vector store (`src/vectorstore.py`).** Exact inner-product search (= cosine on
-normalised vectors). With only ~400 chunks, brute-force search is instant, so the default
-backend is **pure NumPy with no extra dependency**; FAISS (`IndexFlatIP`) is used
-automatically as an accelerator *if installed* but is entirely optional. An approximate
-index (IVF/HNSW) would add complexity for no measurable benefit at this scale.
+**Vector store (`fatf-rag 2/src/vectorstore.py`).** Exact inner-product search (= cosine on normalised vectors). The default backend is **pure NumPy with no extra dependency**; FAISS (`IndexFlatIP`) is used automatically as an accelerator *if installed* but is entirely optional. An approximate index (IVF/HNSW) would add complexity for no measurable benefit at this scale.
 
-**Retrieval (`src/retriever.py`).** Three modes: dense (semantic), BM25 (lexical), and a
-**hybrid** that min-max normalises each score list over the candidate pool and combines
-them `alpha*dense + (1-alpha)*bm25` (default `alpha=0.5`).
+**Retrieval (`fatf-rag 2/src/retriever.py`).** implements a **hybrid** model that min-max normalises each score list over the candidate pool and combines them `alpha*dense + (1-alpha)*bm25` (default `alpha=0.5`).
 
-**Generation (`src/llm.py`).** Decoupled from retrieval and **fully local — no API keys**,
-with two interchangeable backends:
+**Generation (`fatf-rag 2/src/llm.py`).** Decoupled from retrieval and **fully local — no API keys**, with two interchangeable backends:
 
-- **`hf` (default).** Open-source **GPT-2** or **Flan-T5** through Hugging Face
-  `transformers` (`src/hf_generator.py`). Runs with just `pip install` — nothing else to
-  set up — so the project works end-to-end out of the box. This is also the backend behind
-  our scenario experiments (see §4).
-- **`ollama`.** A local **Llama** model served by [Ollama](https://ollama.com) at
-  `localhost:11434`, called over its HTTP API using only the Python standard library.
-  Higher answer quality; needs the Ollama app installed.
+- **`hf` (default).** Open-source **GPT-2** or **Flan-T5** through Hugging Face  `transformers` (`src/hf_generator.py`). Runs with just `pip install` — nothing else to set up — so the project works end-to-end out of the box. This is also the backend behind our scenario experiments (see §4).
+- **`ollama`.** A local **Llama** model served by [Ollama](https://ollama.com) at `localhost:11434`, called over its HTTP API using only the Python standard library. Higher answer quality; needs the Ollama app installed.
 
-Both answer *only* from the supplied passages. **If the selected backend isn't available,
-the system degrades gracefully to retrieval-only mode** with an actionable message instead
-of failing. Switch backends with `LLM_BACKEND` / `HF_MODEL` in `.env`.
+Both answer *only* from the supplied passages. **If the selected backend isn't available, the system degrades gracefully to retrieval-only mode** with an actionable message instead of failing. Switch backends with `LLM_BACKEND` / `HF_MODEL` in `.env`.
 
-**Chunking strategies (`src/ingest.py`).** Three are available so the chunking choice can
-be compared empirically: `recursive` (character windows with overlap — the production
-default), `page` (one page per chunk), and `paragraph` (word-based sliding window with
-optional overlap). The latter two come from our scenario experiments.
+### Experiment design: chunking × generation model.
+
+Retrieval metrics tell us whether the right text was *found*; they don't tell us whether the generated *answer* is right. We ran an end-to-end experiment (`eval/scenarios.py`, also in `notebooks/rag_scenarios.ipynb`) crossing **three chunking strategies** with **three open-source generators**, scored by whether a short expected answer appears in the output across 8 QA pairs:
+
+*Run it*: `python -m eval.scenarios` (downloads models on first use).
+
+| Scenario | Chunking | Model | Correct | Accuracy (%) | 
+|----------|----------|-------|---------|--------------|
+| 1 | page | GPT-2 | 3 | 37.5 | 
+| 2 | paragraph (no overlap) | GPT-2 | 2 | 25.5 |
+| 3 | paragraph (overlap=50) | GPT-2 | 2 | 25.5 |
+| 4 | page | Flan-T5 | 4 | 50.0 |
+| 5 | paragraph (no overlap) | Flan-T5 | 4 | 50.0 |
+| 6 | paragraph (overlap=50) | Flan-T5 | 4 | 50.0 |
+| 7 | page | llama | 7 | 87.5 |
+| 8 | paragraph (no overlap) | llama | 7 | 87.5 |
+| 9 | paragraph (overlap=50) | llama | 7 | 87.5 |
+
+**What we found and how we read it.** Two effects dominated. First, *chunking strategy doesn't have a vissible meaningfull effect*: the `page` strategy performed reasonably well when compared to small chunking, even giving better result for the case of GPT-2
+
+Second, *the seq2seq model (Flan-T5) beat the causal GPT-2, but both models are beaten by llama*: Flan-T5 is instruction-tuned and extractive-friendly, so it copies the answer out of the context, whereas GPT-2 tends to continue the prompt fluently without actually answering. Llama consistantly provide correct answers and guide its source so it can be tracked back.
 
 ## 3. Alternatives we considered and rejected
 
-- **Dense-only retrieval.** Simplest, but it misses exact-term queries. On a small,
-  jargon-heavy legal corpus, lexical signal is too valuable to drop — hence hybrid.
-- **A managed framework (LangChain / LlamaIndex).** Faster to wire up, but it hides the
-  retrieval mechanics we are graded on explaining. We kept the stack thin and transparent
-  so every design choice is visible and defensible.
-- **LLM-based semantic chunking.** Tempting, but non-deterministic and hard to justify.
-  Recursive character splitting with overlap is deterministic, fast, and tunable — and our
-  ablation shows it is good enough.
-- **A cloud vector DB (Pinecone/Chroma server).** Unnecessary at ~400 chunks; a local
-  FAISS file keeps the project fully reproducible with zero infrastructure.
+- **'Qwen3-Embedding-0.6B' embedding model.** [Qwen](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) was considered as an alternative to [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2), as this last model automatically truncates text longer than 256 words and is mainly trained on english. Nevertheless, Qwen is a considerably heavier model increasing the hardware demand and processing times. Inforcing a larger chunk on all-MiniLM is possible but was discarded as it increased the risk of quality loss, in consequence we opted for chunks of 250 word size.
+- **Purely dense or purely lexical (BM25) retrieval.** Each fails where the other succeeds: dense captures meaning and paraphrase but blurs exact terms (acronyms, years, code-like references such as "AML/CFT" or "Recommendation 8"), while BM25 nails exact terms but is blind to synonyms and rephrasing. Their errors are uncorrelated, so a hybrid (fusing both scores) recovers the documents either method alone would miss.
+<!-- 
 - **A cross-encoder reranker.** A reasonable next step (see §6), but it adds a second
   model and latency. We left it out of the core and flagged it as future work because the
   base retrieval already saturates our test set.
+  -->
 
 ## 4. Evaluation
 
-Retrieval is evaluated independently of the LLM (the part we control and can measure
-objectively). We hand-built a **15-question test set** (`eval/testset.json`) and located
-the **gold page(s)** for each answer manually in the PDF. A retrieved chunk counts as
-*relevant* if its page span intersects the gold pages. We report:
+Retrieval is evaluated independently of the LLM (the part we control and can measure objectively). We hand-built a **15-question test set** (`eval/testset.json`) and located the **gold page(s)** for each answer manually in the PDF. A retrieved chunk counts as *relevant* if its page span intersects the gold pages. We report:
 
-- **Recall@k** — share of questions with ≥1 relevant chunk in the top-k (here, since each
-  question has a small target set, this equals hit rate / Success@k).
+- **Recall@k** — share of questions with ≥1 relevant chunk in the top-k (here, since each question has a small target set, this equals hit rate / Success@k).
 - **MRR** — mean reciprocal rank of the first relevant chunk (does the answer come first?).
 - **Precision@k** — average fraction of the top-k that are relevant.
 
@@ -138,38 +154,6 @@ sandboxes); the notebook prints all three side by side.
   so at most a couple of the five returned chunks can be "relevant" by our page-intersection
   rule. Recall and MRR are the metrics that matter for a QA front-end that shows 5 sources.
 
-### Answer-level evaluation: chunking × generation model (scenario experiment)
-
-Retrieval metrics tell us whether the right text was *found*; they don't tell us whether
-the generated *answer* is right. So we ran a second, end-to-end experiment (`eval/scenarios.py`,
-also in `notebooks/rag_scenarios.ipynb`) crossing **three chunking strategies** with **two
-open-source generators**, scored by whether a short expected answer appears in the output
-across 8 QA pairs:
-
-| # | Chunking | Model | 
-|---|----------|-------|
-| 1 | page | GPT-2 |
-| 2 | paragraph (no overlap) | GPT-2 |
-| 3 | paragraph (overlap=50) | GPT-2 |
-| 4 | page | Flan-T5 |
-| 5 | paragraph (no overlap) | Flan-T5 |
-| 6 | paragraph (overlap=50) | Flan-T5 |
-
-Run it: `python -m eval.scenarios` (downloads GPT-2 and Flan-T5 on first use).
-
-**What we found and how we read it.** Two effects dominated. First, **chunking matters more
-than expected**: the `page` strategy performed worst for both models — a whole page is too
-much, mostly-irrelevant context, which buries the answer — while the **word-based paragraph
-chunks (with a small overlap) gave the best answers**, because the retrieved context is
-tight and on-topic. Second, **the seq2seq model (Flan-T5) beat the causal GPT-2**: Flan-T5
-is instruction-tuned and extractive-friendly, so it copies the answer out of the context,
-whereas vanilla GPT-2 tends to continue the prompt fluently without actually answering. The
-takeaway for a compliance assistant is that **retrieval quality and an instruction-following
-reader matter more than model size** — a small, well-prompted Flan-T5 over tight paragraph
-chunks is a better fit than a larger free-running causal model. (The factual-substring match
-is deliberately strict and slightly under-counts paraphrased-but-correct answers, which we
-note below.)
-
 ## 5. Limitations & honesty
 
 - **The test set is a sanity check, not a benchmark.** 15 questions with page-level,
@@ -189,51 +173,9 @@ note below.)
 
 ## 6. Future work
 
-Hybrid `alpha` tuning per query type; a cross-encoder reranker over the top-20; a larger,
-paraphrase-heavy and independently-labelled test set; automatic faithfulness/citation
-scoring of generated answers; section-aware chunking that never splits a single
-Recommendation.
-
----
-
-## Quickstart
-
-```bash
-# 1. Install Python deps
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Build the index (downloads the embedding model on first run)
-python -m scripts.build_index
-
-# 3a. Ask from the command line (generation uses local Flan-T5 by default)
-python cli.py "When must enhanced due diligence be applied?"
-python cli.py --retriever bm25 --no-generate "Recommendation 16 wire transfer"
-
-# 3b. Or launch the web app
-python -m streamlit run app/streamlit_app.py
-
-# 3c. Or open the notebooks
-jupyter notebook notebooks/rag_walkthrough.ipynb   # production pipeline
-jupyter notebook notebooks/rag_scenarios.ipynb     # chunking x model experiments
-
-# 4. Evaluate
-python -m eval.evaluate --ablation   # retrieval metrics + ablation
-python -m eval.scenarios             # answer-level chunking x model comparison
-```
-
-**Answer generation** is fully local with **no API keys**. By default it uses the `hf`
-backend (open-source Flan-T5 via `transformers`, downloaded on first run) — nothing extra
-to install. For higher quality, set `LLM_BACKEND=ollama` in `.env`, install
-[Ollama](https://ollama.com/download), and `ollama pull llama3.2`. If the chosen backend
-isn't available, every entry-point still works and returns cited passages (retrieval-only
-mode).
-
-**Offline tests** (no model download, no key) — a quick way to verify the plumbing:
-
-```bash
-python -m tests.test_pipeline
-```
+- Test the model on different languages (ex. Italian and spanish).
+- Modify pipeline to integrate more than 1 document as source.
+- Explore new embedding models compatible with a loval environment and acceptable time responses.
 
 ## Repository layout
 
