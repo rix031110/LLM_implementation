@@ -1,4 +1,4 @@
-# Core RAG stack. Pins are minimum-version (>=) to avoid wheel-availability
+rm -r # Core RAG stack. Pins are minimum-version (>=) to avoid wheel-availability
 # failures across Python versions / platforms. Tested with Python 3.10-3.12.
 pdfplumber>=0.11           # PDF text extraction (layout-aware)
 sentence-transformers>=2.7 # local embedding models (no API key)

@@ -1,0 +1,10 @@
+scenario,chunking,model,matches_auto,accuracy_auto_%
+1,page,gpt2,0,0.0
+2,paragraph no-overlap,gpt2,0,0.0
+3,paragraph overlap=50,gpt2,0,0.0
+4,page,flan-t5,1,12.5
+5,paragraph no-overlap,flan-t5,1,12.5
+6,paragraph overlap=50,flan-t5,1,12.5
+7,page,llama,1,12.5
+8,paragraph no-overlap,llama,1,12.5
+9,paragraph overlap=50,llama,1,12.5
