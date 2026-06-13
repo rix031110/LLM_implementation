@@ -1,0 +1,58 @@
+[
+  {
+    "question":"What is the Financial Action Task Force?",
+    "expected":"an inter-governmental body",
+    "generated":"The Financial Action Task Force (FATF) is an independent inter-governmental body that develops and promotes policies to protect the global financial system against money laundering, terrorist financing, and the financing of proliferation of weapons of mass destruction. [Front matter, p.2]",
+    "match_auto":false,
+    "gen_time_s":18.62
+  },
+  {
+    "question":"What is FATF?",
+    "expected":"the Financial Action Task Force",
+    "generated":"The Financial Action Task Force (FATF) is an independent inter-governmental body that develops and promotes policies to protect the global financial system against money laundering, terrorist financing, and the financing of proliferation of weapons of mass destruction. [Front matter, p.2]",
+    "match_auto":true,
+    "gen_time_s":4.65
+  },
+  {
+    "question":"What does AML\/CFT mean?",
+    "expected":"anti-money laundering and countering the financing of terrorism",
+    "generated":"According to the context passages, there is no explicit definition of \"AML\/CFT\" provided. However, based on the surrounding text, it appears that AML\/CFT refers to Anti-Money Laundering\/Combating the Financing of Terrorism and Proliferation. This interpretation can be inferred from the title of the document \"[THE FATF RECOMMENDATIONS] INTERNATIONAL STANDARDS ON COMBATING MONEY LAUNDERING AND THE FINANCING OF TERRORISM & PROLIFERATION\" [p. 105].",
+    "match_auto":false,
+    "gen_time_s":10.67
+  },
+  {
+    "question":"When were the recommendations first drafted?",
+    "expected":"1996",
+    "generated":"I couldn't find this information in the provided context passages.",
+    "match_auto":false,
+    "gen_time_s":6.83
+  },
+  {
+    "question":"On which year were the recommendations last updated?",
+    "expected":"2003",
+    "generated":"The FATF Recommendations were last updated in 2012. [Front matter, p.5]",
+    "match_auto":false,
+    "gen_time_s":3.83
+  },
+  {
+    "question":"Why are Non-profit organisations included on the recommendations?",
+    "expected":"they are particularly vulnerable to misuse",
+    "generated":"According to Recommendation 8, non-profit organisations (NPOs) are included in the Recommendations because they have been exploited by terrorists and terrorist organisations to raise and move funds, provide logistical support, encourage terrorist recruitment, or otherwise support terrorist organisations and operations. [58, p.56] The FATF notes that NPOs enjoy the public trust, have access to considerable sources of funds, and are often cash-intensive, making them vulnerable to abuse by terrorists. [58, p.56-57] The objective of Recommendation 8 is to ensure that NPOs are not misused by terrorist organisations, while also promoting transparency and confidence in the sector. [58, p.54] The inclusion of NPOs in the Recommendations aims to protect them from terrorist abuse and preserve their integrity, as well as to prevent the misuse of NPOs as conduits for terrorist financing. [58, p.56]",
+    "match_auto":false,
+    "gen_time_s":16.02
+  },
+  {
+    "question":"Why are the FATF recommendations being revised?",
+    "expected":"to address new and emerging threats",
+    "generated":"According to Recommendation [9], the FATF Recommendations have been revised due to \"new information regarding emerging threats and vulnerabilities to the global financial system\".",
+    "match_auto":false,
+    "gen_time_s":4.3
+  },
+  {
+    "question":"Why should countries implement a risk-based approach?",
+    "expected":"to target their resources more effectively",
+    "generated":"According to Recommendation 1, countries should identify, assess, and understand the money laundering and terrorist financing risks for the country, and take action to mitigate them effectively. This is because the risk-based approach (RBA) enables competent authorities, financial institutions, and designated non-financial businesses and professions (DNFBPs) to ensure that measures to prevent or mitigate money laundering and terrorist financing are commensurate with the risks identified. [Recommendation 1, p.13]",
+    "match_auto":false,
+    "gen_time_s":11.15
+  }
+]

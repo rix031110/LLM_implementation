@@ -1,0 +1,58 @@
+[
+  {
+    "question":"What is the Financial Action Task Force?",
+    "expected":"an inter-governmental body",
+    "generated":"The Financial Action Task Force (FATF) is an independent inter-governmental body that develops and promotes policies to protect the global financial system against money laundering, terrorist financing, and the financing of proliferation of weapons of mass destruction. [Front matter, p.2]",
+    "match_auto":false,
+    "gen_time_s":7.78
+  },
+  {
+    "question":"What is FATF?",
+    "expected":"the Financial Action Task Force",
+    "generated":"The Financial Action Task Force (FATF) is an independent inter-governmental body that develops and promotes policies to protect the global financial system against money laundering, terrorist financing, and the financing of proliferation of weapons of mass destruction. [Front matter, p.2]",
+    "match_auto":true,
+    "gen_time_s":5.16
+  },
+  {
+    "question":"What does AML\/CFT mean?",
+    "expected":"anti-money laundering and countering the financing of terrorism",
+    "generated":"According to Recommendation [1], p.107, AML\/CFT stands for Anti-Money Laundering\/Combating the Financing of Terrorism and Proliferation.",
+    "match_auto":false,
+    "gen_time_s":7.31
+  },
+  {
+    "question":"When were the recommendations first drafted?",
+    "expected":"1996",
+    "generated":"The FATF Recommendations were first drafted in 2012. [Front matter, p.72]",
+    "match_auto":false,
+    "gen_time_s":5.96
+  },
+  {
+    "question":"On which year were the recommendations last updated?",
+    "expected":"2003",
+    "generated":"The FATF Recommendations were last updated in 2012, as stated on page 5 of the provided context passages.",
+    "match_auto":false,
+    "gen_time_s":5.06
+  },
+  {
+    "question":"Why are Non-profit organisations included on the recommendations?",
+    "expected":"they are particularly vulnerable to misuse",
+    "generated":"Non-profit organisations (NPOs) are included in the Recommendations because they can be exploited by terrorists to raise and move funds, provide logistical support, encourage terrorist recruitment, or otherwise support terrorist organisations and operations. [Recommendation 8, p. 1] According to Recommendation 8, NPOs may be vulnerable to abuse by terrorists due to their public trust, access to considerable sources of funds, and often cash-intensive nature. Additionally, some NPOs have a global presence that provides a framework for national and international operations and financial transactions, making them susceptible to infiltration by terrorist organisations. [Recommendation 8, p. 2] The objective of Recommendation 8 is to ensure that NPOs are not misused by terrorist organisations, and the approach taken is based on general principles that aim to protect the sector against abuse while promoting transparency and confidence in legitimate charitable activities. [Recommendation 8, p. 3]",
+    "match_auto":false,
+    "gen_time_s":15.68
+  },
+  {
+    "question":"Why are the FATF recommendations being revised?",
+    "expected":"to address new and emerging threats",
+    "generated":"According to Recommendation [97] on page 99, the revision of the Recommendations has involved \"extensive consultation\" with stakeholders, including the private sector, civil society, and other interested parties. This suggests that the revisions were made in light of new information regarding emerging threats and vulnerabilities to the global financial system. However, I couldn't find a specific statement on why the FATF recommendations are being revised. The provided context passages only mention that the revision has been done \"in accordance with its mandate\" [2012 OECD\/FATF 9] but do not provide further information on the reasons behind the revisions.",
+    "match_auto":false,
+    "gen_time_s":9.59
+  },
+  {
+    "question":"Why should countries implement a risk-based approach?",
+    "expected":"to target their resources more effectively",
+    "generated":"According to Recommendation 1 [p.33], countries should implement a risk-based approach (RBA) because it is an effective way to combat money laundering and terrorist financing. The RBA allows competent authorities, financial institutions, and designated non-financial bodies and professions (DNFBPs) to ensure that measures to prevent or mitigate money laundering and terrorist financing are commensurate with the risks identified, enabling them to make decisions on how to allocate their resources in the most effective way.",
+    "match_auto":false,
+    "gen_time_s":9.1
+  }
+]
