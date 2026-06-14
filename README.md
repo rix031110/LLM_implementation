@@ -54,7 +54,7 @@ We framed the task as a **grounded, auditable question-answering**, that is, ret
 
 As most compliance teams work on secure environments with wide internet restrictions we opted for a system that runs locally without the external needs of tools like Colab. In consequence, the use of our RAG system is limited by the software and hardware specifications. The use of GPU is required in order for embedding and text generation models to work on acceptable time-frames.
 
-Our **pipeline (`fatf-rag 2/cli.py`)** works as follow:
+**Requirements** to execute can be found on **`fatf-rag 2/requirements.txt`**. Our **pipeline (`fatf-rag 2/cli.py`)** works as follow
 
 ```
 Starting document ──► ingest/chunk ──► embed ──► FAISS index ┐
